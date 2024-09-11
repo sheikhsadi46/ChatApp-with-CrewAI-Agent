@@ -1,0 +1,63 @@
+﻿@{
+    ViewData["Title"] = "Chat with CrewAI Agent";
+}
+
+<h2>Chat with CrewAI Agent</h2>
+
+<div id="chatWindow" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+<input type="text" id="messageInput" style="width: 90%;" placeholder="Type your message here..." />
+<button id="sendButton" >Send</button>
+
+<style>
+    .user-message {
+        text-align: right;
+        color: darkblue;
+        margin-bottom: 5px;
+    }
+
+    .other-message {
+        text-align: left;
+        color: black;
+        margin-bottom: 5px;
+    }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.9/signalr.min.js"></script>
+<script>
+    let user = localStorage.getItem('username') || "Me";
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chatHub")
+        .build();
+
+    connection.on("ReceiveMessage", function (sender, message) {
+        const chatWindow = document.getElementById("chatWindow");
+        const messageClass = (sender === user) ? 'user-message' : 'other-message';
+
+        chatWindow.innerHTML += `<div class="${messageClass}"><strong>${sender === user ? '' : sender + ':'}</strong> ${message}</div>`;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    });
+
+    connection.start().catch(function (err) {
+        return console.error(err.toString());
+    });
+
+    function sendMessage() {
+        const message = document.getElementById("messageInput").value;
+        if (message.trim() === "") return;
+        connection.invoke("SendMessage", user, message).catch(function (err) {
+            return console.error(err.toString());
+        });
+        document.getElementById("messageInput").value = "";
+    }
+
+    document.getElementById("messageInput").addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+    document.getElementById("sendButton").addEventListener("click", function () {
+        sendMessage();
+    });
+</script>
